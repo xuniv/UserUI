@@ -1,29 +1,51 @@
 /*
-* usergui.js
+* userui.js
 * v1.0.0
-* https://github.com/AugmentedWeb/UserGui
+* https://github.com/xuniv/UserUI
 * Apache 2.0 licensed
 */
 
 class UserGui {
 	constructor() {
 		const grantArr = GM_info?.script?.grant;
-	
+
 		if(typeof grantArr == "object") {
 			if(!grantArr.includes("GM_xmlhttpRequest")) {
 				prompt(`${this.#projectName} needs GM_xmlhttpRequest!\n\nPlease add this to your userscript's header...`, "// @grant       GM_xmlhttpRequest");
 			}
 
-			if(!grantArr.includes("GM_getValue")) {
+			if(!grantArr.includes("GM_getValue") && !grantArr.includes("GM.getValue")) {
 				prompt(`${this.#projectName} needs GM_getValue!\n\nPlease add this to your userscript's header...`, "// @grant       GM_getValue");
 			}
 
-			if(!grantArr.includes("GM_setValue")) {
+			if(!grantArr.includes("GM_setValue") && !grantArr.includes("GM.getValue")) {
 				prompt(`${this.#projectName} needs GM_setValue!\n\nPlease add this to your userscript's header...`, "// @grant       GM_setValue");
 			}
 		}
 	}
-	
+
+	// GM API override
+	GM_getValue = async (key, defaultValue = null) => {
+		if (typeof GM?.getValue === "function") {
+			return await GM.getValue(key, defaultValue);
+		} else if (typeof window.GM_getValue === "function") {
+			return window.GM_getValue(key, defaultValue);
+		} else {
+			console.warn("GM_getValue and GM.getValue are not available.");
+			return defaultValue;
+		}
+	};
+
+	GM_setValue = async (key, value) => {
+		if (typeof GM?.setValue === "function") {
+			return await GM.setValue(key, value);
+		} else if (typeof window.GM_setValue === "function") {
+			return window.GM_setValue(key, value);
+		} else {
+			console.warn("GM_setValue and GM.setValue are not available.");
+		}
+	};
+
 	#projectName = "UserGui";
 	window = undefined;
 	document = undefined;
@@ -54,11 +76,11 @@ class UserGui {
 					form {
 						padding: 10px;
 					}
-			
+
 					#gui {
 						height: fit-content;
 					}
-			
+
 					.rendered-form {
 						padding: 10px;
 					}
@@ -77,14 +99,14 @@ class UserGui {
 						justify-content: space-between;
 						align-items: center;
 					}
-			
+
 					.left-title {
 						font-size: 14px;
 						font-weight: bold;
 						padding: 0;
 						margin: 0;
 					}
-					
+
 					#button-close-gui {
 						vertical-align: middle;
 					}
@@ -103,7 +125,7 @@ class UserGui {
 					}
 
 					.formbuilder-button {
-					    width: fit-content;
+							width: fit-content;
 					}
 				`
 			},
@@ -214,7 +236,7 @@ class UserGui {
 
 			target.classList.add("active");
 			this.document.querySelector(contentID).classList.add("active");
-	
+
 			[...this.document.querySelectorAll(".nav-link")].forEach(tab => {
 				if(tab != target) {
 					const contentID = tab.getAttribute("data-bs-target");
@@ -265,7 +287,7 @@ class UserGui {
 
 	// Returns the GUI's whole document as string
 	async #createDocument() {
-		const bootstrapStyling = await this.#bypassCors("https://raw.githubusercontent.com/AugmentedWeb/UserGui/main/resources/bootstrap.css");
+		const bootstrapStyling = await this.#bypassCors("https://cdn.jsdelivr.net/gh/xuniv/UserUI/resources/bootstrap.css");
 
 		const externalDocument = `
 		<!DOCTYPE html>
@@ -293,7 +315,7 @@ class UserGui {
 
 		const internalDocument = `
 		<!doctype html>
-		<html lang="en">
+		<html lang="ko">
 		<head>
 			<style>
 			${bootstrapStyling}
@@ -352,7 +374,7 @@ class UserGui {
 
 		const x = (screen.width - guiWidth) / 2;
 		const y = (screen.height - guiHeight) / 2;
-		
+
 		return { "x" : x, "y": y };
 	}
 
@@ -362,7 +384,7 @@ class UserGui {
 
 		const x = (window.innerWidth - guiWidth) / 2;
 		const y = (window.innerHeight - guiHeight) / 2;
-		
+
 		return { "x" : x, "y": y };
 	}
 
@@ -393,7 +415,7 @@ class UserGui {
 		// Gets the iFrame's position relative to the main document
 		function getFramePos() {
 			const frameBounds = iFrame.getBoundingClientRect();
-			
+
 			return { "x": frameBounds.x, "y" : frameBounds.y };
 		}
 
@@ -429,7 +451,7 @@ class UserGui {
 			}
 
 			const deltaX = mousePos.x - e.clientX,
-				  deltaY = mousePos.y - e.clientY;
+					deltaY = mousePos.y - e.clientY;
 
 			const frameSize = getFrameSize();
 			const allowedSize = frameSize.width - deltaX > 160 && frameSize.height - deltaY > 90;
@@ -521,7 +543,7 @@ class UserGui {
 		// Stop dragging and resizing (iFrame)
 		this.document.addEventListener('mouseup', e => {
 			e.preventDefault();
-			
+
 			dragging = false;
 			resizing = false;
 		});
@@ -547,7 +569,7 @@ class UserGui {
 			subtree: true,
 			attributes: true
 		});
-		
+
 		adjustFrameSize();
 	}
 
@@ -614,7 +636,7 @@ class UserGui {
 				this.close();
 			}
 		} 
-		
+
 		else {
 			// Window was already opened, bring the window back to focus
 			this.window.focus();
@@ -664,14 +686,14 @@ class UserGui {
 					// Fade-in implementation
 					setTimeout(() => iframe.style["opacity"] = "1", fadeInSpeedMs/2);
 					setTimeout(() => iframe.style["transition"] = "none", fadeInSpeedMs + 500);
-		
+
 					this.window = iframe.contentWindow;
 					this.document = iframe.contentDocument;
 					this.iFrame = iframe;
-		
+
 					this.#initializeInternalGuiEvents(iframe);
 					this.#initializeTabs();
-					
+
 					readyFunction();
 				}
 			}
@@ -707,10 +729,10 @@ class UserGui {
 		if(this.document) {
 			[...this.document.querySelectorAll(".form-group")].forEach(elem => {
 				const inputElem = elem.querySelector("[name]");
-	
+
 				const name = inputElem.getAttribute("name"),
-					  data = this.getData(name);
-	
+						data = this.getData(name);
+
 				if(data) {
 					config.push({ "name" : name, "value" : data });
 				}
@@ -763,7 +785,7 @@ class UserGui {
 			color: ${hex} !important;
 		}
 		`;
-		
+
 		const styleSheet = document.createElement("style")
 		styleSheet.innerText = styles;
 		this.document.head.appendChild(styleSheet);
@@ -823,7 +845,7 @@ class UserGui {
 	// Sets data to types: CHECKBOX GROUP
 	setChecked(name, checkedArr) {
 		const checkboxes = [...this.document.querySelector(`.field-${name}`).querySelectorAll(`input[name*=${name}]`)]
-		
+
 		checkboxes.forEach(checkbox => {
 			if(checkedArr.includes(checkbox.value)) {
 				checkbox.checked = true;
@@ -832,12 +854,12 @@ class UserGui {
 
 		this.dispatchFormEvent(name);
 	}
-	
+
 	// Gets data from types: FILE UPLOAD
 	getFiles(name) {
 		return this.document.querySelector(`.field-${name}`).querySelector(`input[id=${name}]`).files;
 	}
-	
+
 	// Gets data from types: SELECT
 	getOption(name) {
 		const selectedArr = [...this.document.querySelector(`.field-${name} #${name}`).selectedOptions].map(({value}) => value);
@@ -848,11 +870,11 @@ class UserGui {
 	// Sets data to types: SELECT
 	setOption(name, newOptionsValue) {
 		if(typeof newOptionsValue == 'object') {
-		    newOptionsValue.forEach(optionVal => {
+				newOptionsValue.forEach(optionVal => {
 			this.document.querySelector(`.field-${name}`).querySelector(`option[value=${optionVal}]`).selected = true;
-		    });
+				});
 		} else {
-		    this.document.querySelector(`.field-${name}`).querySelector(`option[value=${newOptionsValue}]`).selected = true;
+				this.document.querySelector(`.field-${name}`).querySelector(`option[value=${newOptionsValue}]`).selected = true;
 		}
 
 		this.dispatchFormEvent(name);
